@@ -170,12 +170,15 @@
   <div id="differenceText" class="difference"></div>
 </div>
 
-<!-- Your existing script -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import {
+    getFirestore, collection, addDoc, deleteDoc, doc,
+    onSnapshot, query, orderBy, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-  // Your Firebase config
+  // --- Firebase config (yours) ---
   const firebaseConfig = {
     apiKey: "AIzaSyBK_nTo7Oj6-feszqu8F4unrX_oD6rVPxI",
     authDomain: "canteentracker-409ca.firebaseapp.com",
@@ -186,10 +189,12 @@
     measurementId: "G-ZCZFYWKNSX"
   };
 
-  // Initialize Firebase
+  // --- Init ---
   const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
   const db = getFirestore(app);
 
+  // --- DOM refs ---
   const form = document.getElementById('chargeForm');
   const itemDescInput = document.getElementById('itemDesc');
   const itemCostInput = document.getElementById('itemCost');
@@ -198,44 +203,37 @@
   const deductedAmountInput = document.getElementById('deductedAmount');
   const differenceText = document.getElementById('differenceText');
 
+  // Small inline status/error
+  let statusEl = document.getElementById('status');
+  if (!statusEl) {
+    statusEl = document.createElement('div');
+    statusEl.id = 'status';
+    statusEl.style.cssText = "margin:10px 0;color:#d9534f;font-weight:600;";
+    document.querySelector('.container')?.prepend(statusEl);
+  }
+  const setStatus = (msg='') => { statusEl.textContent = msg || ''; };
+
   let charges = [];
 
-  function formatCurrency(num) {
-    return '₱' + num.toFixed(2);
-  }
-
-  async function loadCharges() {
-    charges = []; // reset
-    const querySnapshot = await getDocs(collection(db, "charges"));
-    querySnapshot.forEach((docSnap) => {
-      charges.push({ id: docSnap.id, ...docSnap.data() });
-    });
-    updateChargesTable();
-    calculateTotal();
-    updateDifference();
-  }
+  const formatCurrency = (num) => '₱' + Number(num).toFixed(2);
 
   function updateChargesTable() {
     chargesList.innerHTML = '';
     charges.forEach((charge, index) => {
       const tr = document.createElement('tr');
 
-      // Index
       const tdIndex = document.createElement('td');
       tdIndex.textContent = index + 1;
       tr.appendChild(tdIndex);
 
-      // Description
       const tdDesc = document.createElement('td');
       tdDesc.textContent = charge.description;
       tr.appendChild(tdDesc);
 
-      // Cost
       const tdCost = document.createElement('td');
       tdCost.textContent = formatCurrency(charge.cost);
       tr.appendChild(tdCost);
 
-      // Action - Delete button
       const tdAction = document.createElement('td');
       const delBtn = document.createElement('button');
       delBtn.textContent = 'Remove';
@@ -246,8 +244,12 @@
       delBtn.style.borderRadius = '5px';
       delBtn.style.cursor = 'pointer';
       delBtn.addEventListener('click', async () => {
-        await deleteDoc(doc(db, "charges", charge.id));
-        await loadCharges();
+        try {
+          await deleteDoc(doc(db, "charges", charge.id));
+        } catch (err) {
+          console.error(err);
+          setStatus('Delete failed: ' + (err.message || err));
+        }
       });
       tdAction.appendChild(delBtn);
       tr.appendChild(tdAction);
@@ -257,7 +259,7 @@
   }
 
   function calculateTotal() {
-    const total = charges.reduce((acc, c) => acc + c.cost, 0);
+    const total = charges.reduce((acc, c) => acc + Number(c.cost || 0), 0);
     totalOwedDisplay.textContent = `Total Owed: ${formatCurrency(total)}`;
     return total;
   }
@@ -276,30 +278,59 @@
     }
   }
 
+  // Realtime listener
+  let unsubscribe = null;
+  function startRealtime() {
+    const q = query(collection(db, "charges"), orderBy("createdAt", "asc"));
+    unsubscribe = onSnapshot(q, (snapshot) => {
+      charges = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      updateChargesTable();
+      calculateTotal();
+      updateDifference();
+      setStatus('');
+    }, (err) => {
+      console.error(err);
+      setStatus('Realtime read failed: ' + (err.message || err));
+    });
+  }
+
+  // Add new charge
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-
     const desc = itemDescInput.value.trim();
     const cost = parseFloat(itemCostInput.value);
 
     if (desc && !isNaN(cost) && cost > 0) {
-      await addDoc(collection(db, "charges"), {
-        description: desc,
-        cost: cost
-      });
-
-      await loadCharges();
-
-      form.reset();
-      itemDescInput.focus();
+      try {
+        setStatus('Saving…');
+        await addDoc(collection(db, "charges"), {
+          description: desc,
+          cost: cost,
+          createdAt: serverTimestamp()
+        });
+        form.reset();
+        itemDescInput.focus();
+        setStatus('');
+      } catch (err) {
+        console.error(err);
+        setStatus('Save failed: ' + (err.message || err));
+      }
     }
   });
 
   deductedAmountInput.addEventListener('input', updateDifference);
 
-  // Load data when page starts
-  loadCharges();
+  // Auth first, then start listeners
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      startRealtime();
+    } else {
+      signInAnonymously(auth).catch(err => {
+        console.error(err);
+        setStatus('Anonymous sign-in failed: ' + (err.message || err));
+      });
+    }
+  });
 </script>
-
 </body>
 </html>
