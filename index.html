@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="style.css">
+<title>Newfold Philippines - Canteen Charges Tracker</title>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Roboto&display=swap');
+  body {
+    font-family: 'Roboto', sans-serif;
+    background: #f8fafc;
+    margin: 0;
+    padding: 20px;
+    color: #333;
+  }
+  header {
+    text-align: center;
+    margin-bottom: 30px;
+  }
+  header h1 {
+    color: #0078d4;
+    margin-bottom: 5px;
+  }
+  header p {
+    font-size: 1.1rem;
+    color: #666;
+  }
+  .container {
+    max-width: 700px;
+    margin: 0 auto;
+    background: #fff;
+    padding: 25px 30px;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  }
+  form {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 25px;
+  }
+  form input[type="text"], form input[type="number"] {
+    flex: 1;
+    padding: 10px 12px;
+    font-size: 1rem;
+    border: 1.8px solid #ddd;
+    border-radius: 6px;
+    transition: border-color 0.3s ease;
+  }
+  form input[type="text"]:focus, form input[type="number"]:focus {
+    border-color: #0078d4;
+    outline: none;
+  }
+  form button {
+    background: #0078d4;
+    color: #fff;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.3s ease;
+  }
+  form button:hover {
+    background: #005ea3;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+  }
+  thead {
+    background: #0078d4;
+    color: #fff;
+  }
+  th, td {
+    text-align: left;
+    padding: 12px 15px;
+    border-bottom: 1px solid #eee;
+  }
+  tbody tr:hover {
+    background: #f1f9ff;
+  }
+  .total {
+    font-size: 1.25rem;
+    font-weight: 700;
+    text-align: right;
+    margin-bottom: 15px;
+  }
+  .payslip-area {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+  }
+  .payslip-area label {
+    flex: 1 0 140px;
+    font-weight: 600;
+  }
+  .payslip-area input[type="number"] {
+    flex: 1;
+    padding: 10px 12px;
+    font-size: 1rem;
+    border: 1.8px solid #ddd;
+    border-radius: 6px;
+    transition: border-color 0.3s ease;
+  }
+  .payslip-area input[type="number"]:focus {
+    border-color: #0078d4;
+    outline: none;
+  }
+  .difference {
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin-top: 15px;
+    text-align: right;
+  }
+  .difference.positive {
+    color: green;
+  }
+  .difference.negative {
+    color: red;
+  }
+  @media (max-width: 550px) {
+    form {
+      flex-direction: column;
+    }
+    .payslip-area {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .payslip-area label {
+      flex: unset;
+      margin-bottom: 5px;
+    }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Newfold Philippines</h1>
+  <p>Canteen Charges Tracker - Track your food charges and payroll deductions</p>
+</header>
+
+<div class="container">
+  <form id="chargeForm">
+    <input type="text" id="itemDesc" placeholder="Food Item Description" required />
+    <input type="number" id="itemCost" placeholder="Cost (₱)" min="0.01" step="0.01" required />
+    <button type="submit">Add Charge</button>
+  </form>
+
+  <table aria-label="List of canteen charges">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Item Description</th>
+        <th>Cost (₱)</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody id="chargesList"></tbody>
+  </table>
+
+  <div class="total" id="totalOwed">Total Owed: ₱0.00</div>
+
+  <div class="payslip-area">
+    <label for="deductedAmount">Amount Deducted in Payslip (₱):</label>
+    <input type="number" id="deductedAmount" placeholder="Enter deducted amount" min="0" step="0.01" />
+  </div>
+  <div id="differenceText" class="difference"></div>
+</div>
+
+<!-- Your existing script -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  // Your Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyBK_nTo7Oj6-feszqu8F4unrX_oD6rVPxI",
+    authDomain: "canteentracker-409ca.firebaseapp.com",
+    projectId: "canteentracker-409ca",
+    storageBucket: "canteentracker-409ca.firebasestorage.app",
+    messagingSenderId: "666105150836",
+    appId: "1:666105150836:web:34d08e1cfddf87ff1bc021",
+    measurementId: "G-ZCZFYWKNSX"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  const form = document.getElementById('chargeForm');
+  const itemDescInput = document.getElementById('itemDesc');
+  const itemCostInput = document.getElementById('itemCost');
+  const chargesList = document.getElementById('chargesList');
+  const totalOwedDisplay = document.getElementById('totalOwed');
+  const deductedAmountInput = document.getElementById('deductedAmount');
+  const differenceText = document.getElementById('differenceText');
+
+  let charges = [];
+
+  function formatCurrency(num) {
+    return '₱' + num.toFixed(2);
+  }
+
+  async function loadCharges() {
+    charges = []; // reset
+    const querySnapshot = await getDocs(collection(db, "charges"));
+    querySnapshot.forEach((docSnap) => {
+      charges.push({ id: docSnap.id, ...docSnap.data() });
+    });
+    updateChargesTable();
+    calculateTotal();
+    updateDifference();
+  }
+
+  function updateChargesTable() {
+    chargesList.innerHTML = '';
+    charges.forEach((charge, index) => {
+      const tr = document.createElement('tr');
+
+      // Index
+      const tdIndex = document.createElement('td');
+      tdIndex.textContent = index + 1;
+      tr.appendChild(tdIndex);
+
+      // Description
+      const tdDesc = document.createElement('td');
+      tdDesc.textContent = charge.description;
+      tr.appendChild(tdDesc);
+
+      // Cost
+      const tdCost = document.createElement('td');
+      tdCost.textContent = formatCurrency(charge.cost);
+      tr.appendChild(tdCost);
+
+      // Action - Delete button
+      const tdAction = document.createElement('td');
+      const delBtn = document.createElement('button');
+      delBtn.textContent = 'Remove';
+      delBtn.style.background = '#d9534f';
+      delBtn.style.color = '#fff';
+      delBtn.style.border = 'none';
+      delBtn.style.padding = '6px 12px';
+      delBtn.style.borderRadius = '5px';
+      delBtn.style.cursor = 'pointer';
+      delBtn.addEventListener('click', async () => {
+        await deleteDoc(doc(db, "charges", charge.id));
+        await loadCharges();
+      });
+      tdAction.appendChild(delBtn);
+      tr.appendChild(tdAction);
+
+      chargesList.appendChild(tr);
+    });
+  }
+
+  function calculateTotal() {
+    const total = charges.reduce((acc, c) => acc + c.cost, 0);
+    totalOwedDisplay.textContent = `Total Owed: ${formatCurrency(total)}`;
+    return total;
+  }
+
+  function updateDifference() {
+    const total = calculateTotal();
+    const deducted = parseFloat(deductedAmountInput.value);
+    if (!isNaN(deducted)) {
+      const diff = total - deducted;
+      differenceText.textContent = diff === 0
+        ? 'Perfect match! Your deduction matches your charges.'
+        : `Difference: ${formatCurrency(diff)} (${diff > 0 ? 'You owe more' : 'You were deducted more'})`;
+      differenceText.className = 'difference ' + (diff >= 0 ? 'positive' : 'negative');
+    } else {
+      differenceText.textContent = '';
+    }
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const desc = itemDescInput.value.trim();
+    const cost = parseFloat(itemCostInput.value);
+
+    if (desc && !isNaN(cost) && cost > 0) {
+      await addDoc(collection(db, "charges"), {
+        description: desc,
+        cost: cost
+      });
+
+      await loadCharges();
+
+      form.reset();
+      itemDescInput.focus();
+    }
+  });
+
+  deductedAmountInput.addEventListener('input', updateDifference);
+
+  // Load data when page starts
+  loadCharges();
+</script>
+
+</body>
+</html>
