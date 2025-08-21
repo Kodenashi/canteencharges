@@ -1,0 +1,223 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto&display=swap');
+
+body {
+    font-family: 'Roboto', sans-serif;
+    background: #f8fafc;
+    margin: 0;
+    padding: 20px;
+    color: #333;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+header h1 {
+    color: #0078d4;
+    margin-bottom: 5px;
+}
+
+header p {
+    font-size: 1.1rem;
+    color: #666;
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    background: #fff;
+    padding: 25px 30px;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+form {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 25px;
+    flex-wrap: wrap;
+}
+
+form input {
+    flex: 1;
+    padding: 10px 12px;
+    font-size: 1rem;
+    border: 1.8px solid #ddd;
+    border-radius: 6px;
+    transition: border-color 0.3s ease;
+}
+
+form input:focus {
+    border-color: #0078d4;
+    outline: none;
+}
+
+form button {
+    background: #0078d4;
+    color: #fff;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+form button:hover {
+    background: #005ea3;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+}
+
+thead {
+    background: #0078d4;
+    color: #fff;
+}
+
+th,
+td {
+    text-align: left;
+    padding: 12px 15px;
+    border-bottom: 1px solid #eee;
+}
+
+tbody tr:hover {
+    background: #f1f9ff;
+}
+
+.total {
+    font-size: 1.25rem;
+    font-weight: 700;
+    text-align: right;
+    margin-bottom: 15px;
+}
+
+.payslip-area {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.payslip-area label {
+    flex: 1 0 200px;
+    font-weight: 600;
+}
+
+.payslip-area input[type="number"] {
+    flex: 1;
+    padding: 10px 12px;
+    font-size: 1rem;
+    border: 1.8px solid #ddd;
+    border-radius: 6px;
+    transition: border-color 0.3s ease;
+}
+
+.payslip-area input:focus {
+    border-color: #0078d4;
+    outline: none;
+}
+
+.difference {
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin-top: 15px;
+    text-align: right;
+}
+
+.difference.positive {
+    color: green;
+}
+
+.difference.negative {
+    color: red;
+}
+
+.reset-btn {
+    background: red;
+    color: white;
+    font-weight: bold;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+    margin-bottom: 20px;
+}
+
+.reset-btn:hover {
+    background: darkred;
+}
+
+@media (max-width: 550px) {
+    form {
+        flex-direction: column;
+    }
+
+    .payslip-area {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .payslip-area label {
+        flex: unset;
+        margin-bottom: 5px;
+    }
+}
+/* Confirmation Modal */
+.modal {
+  display: none; 
+  position: fixed;
+  z-index: 1000;
+  left: 0; top: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.5);
+  justify-content: center;
+  align-items: center;
+}
+.modal-content {
+  background: #fff;
+  padding: 25px 30px;
+  border-radius: 12px;
+  max-width: 400px;
+  text-align: center;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+  animation: fadeIn 0.3s ease;
+}
+.modal-content h3 {
+  margin-top: 0;
+  color: #d32f2f;
+}
+.modal-actions {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+}
+.cancel-btn, .confirm-btn {
+  padding: 10px 18px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.cancel-btn {
+  background: #ccc;
+  color: #333;
+}
+.cancel-btn:hover { background: #bbb; }
+.confirm-btn {
+  background: #d32f2f;
+  color: white;
+}
+.confirm-btn:hover { background: #b71c1c; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
